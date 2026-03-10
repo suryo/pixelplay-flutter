@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pixelplay/providers/media_provider.dart';
@@ -11,455 +12,156 @@ import 'package:pixelplay/screens/visualizer_screen.dart';
 import 'package:pixelplay/screens/web_movie_player.dart';
 import 'package:pixelplay/screens/streaming_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+String _formatDuration(Duration d) {
+  if (d.inSeconds <= 0) return '0:00';
+  final m = d.inMinutes;
+  final s = d.inSeconds % 60;
+  return '$m:${s.toString().padLeft(2, '0')}';
+}
+
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  String _searchQuery = '';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          // Background Gradient
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF0F0F1A),
-                  Color(0xFF1B1B2F),
-                  Color(0xFF0F0F1A),
-                ],
-              ),
-            ),
-          ),
-          
-          SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(context),
-                _buildQuickMenu(context),
-                const SizedBox(height: 20),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24.0),
-                  child: Text(
-                    'RECENT MEDIA',
-                    style: TextStyle(
-                      color: Colors.white38,
-                      fontSize: 12,
-                      letterSpacing: 1.5,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Expanded(child: _buildMediaList(context)),
-              ],
-            ),
-          ),
-          
-          _buildMiniPlayer(context),
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: const _QueueHeader(),
+        backgroundColor: Colors.black,
+        elevation: 0,
+        centerTitle: false,
+        actions: [
+          IconButton(icon: const Icon(Icons.close, color: Colors.white70), onPressed: () {}),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.read<MediaProvider>().pickMedia(),
-        backgroundColor: const Color(0xFF6C63FF),
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
-    );
-  }
-
-  Widget _buildQuickMenu(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: GridView.count(
-        crossAxisCount: 2,
-        shrinkWrap: true,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 1.8,
-        physics: const NeverScrollableScrollPhysics(),
+      body: Column(
         children: [
-          _menuItem(
-            context, 
-            'Playlists', 
-            FontAwesomeIcons.listOl, 
-            const Color(0xFF6C63FF),
-            () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PlaylistScreen())),
-          ),
-          _menuItem(
-            context, 
-            'Equalizer', 
-            FontAwesomeIcons.sliders, 
-            const Color(0xFF00D2FF),
-            () => _showEqualizer(context),
-          ),
-          _menuItem(
-            context, 
-            'Visualizer', 
-            FontAwesomeIcons.signal, 
-            const Color(0xFF8E2DE2),
-            () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VisualizerScreen())),
-          ),
-          _menuItem(
-            context, 
-            'Streaming', 
-            FontAwesomeIcons.globe, 
-            const Color(0xFF00FF87),
-            () => _showWebSelectionDialog(context),
-          ),
-          _menuItem(
-            context, 
-            'About', 
-            FontAwesomeIcons.circleInfo, 
-            const Color(0xFFEC008C),
-            () => _showAboutApp(context),
-          ),
+          const _QueueControls(),
+          Expanded(child: _buildMediaList(context)),
+          _buildSearchQueue(),
         ],
       ),
     );
   }
 
-  void _showWebSelectionDialog(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => GlassBox(
-        borderRadius: 20,
-        blur: 20,
-        opacity: 0.1,
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('STREAMING SOURCES', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 2, color: Colors.white)),
-              const SizedBox(height: 20),
-              ListTile(
-                leading: const Icon(FontAwesomeIcons.circlePlay, color: Color(0xFF00FF87)),
-                title: const Text('DramaBos', style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const StreamingScreen(
-                    sourceName: 'DramaBos',
-                    apiUrl: 'https://dramabox.dramabos.my.id/api/v1/homepage?page=1&lang=in',
-                  )));
-                },
-              ),
-              ListTile(
-                leading: const Icon(FontAwesomeIcons.film, color: Color(0xFF00FF87)),
-                title: const Text('Rebahin Movies', style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const StreamingScreen(
-                    sourceName: 'Rebahin Movies',
-                    apiUrl: 'https://zeldvorik.ru/rebahin21/api.php?action=movies&page=1',
-                  )));
-                },
-              ),
-              ListTile(
-                leading: const Icon(FontAwesomeIcons.film, color: Color(0xFF00FF87)),
-                title: const Text('Rebahin Series', style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const StreamingScreen(
-                    sourceName: 'Rebahin Series',
-                    apiUrl: 'https://zeldvorik.ru/rebahin21/api.php?action=series&page=1',
-                  )));
-                },
-              ),
-              ListTile(
-                leading: const Icon(FontAwesomeIcons.fire, color: Color(0xFFFF5F6D)),
-                title: const Text('Trending Now', style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const StreamingScreen(
-                    sourceName: 'Trending',
-                    apiUrl: 'https://zeldvorik.ru/rebahin21/api.php?action=trending&page=1',
-                  )));
-                },
-              ),
-              const SizedBox(height: 20),
-            ],
-          ),
-        ),
+  Widget _buildSearchQueue() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: const BoxDecoration(
+        color: Colors.black,
+        border: Border(top: BorderSide(color: Colors.white10, width: 0.5)),
       ),
-    );
-  }
-
-  Widget _menuItem(BuildContext context, String title, IconData icon, Color color, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: GlassBox(
-        borderRadius: 16,
-        blur: 10,
-        opacity: 0.1,
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: color, size: 18),
+      child: Row(
+        children: [
+          const Icon(Icons.search, color: Colors.white38, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextField(
+              onChanged: (val) {
+                setState(() {
+                  _searchQuery = val.toLowerCase().trim();
+                });
+              },
+              decoration: const InputDecoration(
+                hintText: 'Search in this queue...',
+                hintStyle: TextStyle(color: Colors.white24, fontSize: 13),
+                border: InputBorder.none,
+                isDense: true,
               ),
-              const SizedBox(width: 12),
-              Text(
-                title.toUpperCase(),
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showEqualizer(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => GlassBox(
-        borderRadius: 20,
-        blur: 20,
-        opacity: 0.1,
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('EQUALIZER', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 2, color: Colors.white)),
-              const SizedBox(height: 20),
-              SizedBox(
-                height: 200,
-                child: Consumer<MediaProvider>(
-                  builder: (context, provider, _) => ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: 10,
-                    itemBuilder: (context, index) {
-                      return Column(
-                        children: [
-                          Expanded(
-                            child: RotatedBox(
-                              quarterTurns: 3,
-                              child: SliderTheme(
-                                data: SliderTheme.of(context).copyWith(
-                                  trackHeight: 2,
-                                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 4),
-                                ),
-                                child: Slider(
-                                  value: provider.equalizerGains[index],
-                                  min: -10,
-                                  max: 10,
-                                  onChanged: (val) => provider.updateEqualizer(index, val),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Text(
-                            ['31','62','125','250','500','1k','2k','4k','8k','16k'][index],
-                            style: const TextStyle(fontSize: 8, color: Colors.white38),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showAboutApp(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: GlassBox(
-          borderRadius: 20,
-          opacity: 0.8,
-          color: const Color(0xFF1B1B2F),
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(FontAwesomeIcons.play, size: 50, color: Color(0xFF6C63FF)),
-                const SizedBox(height: 20),
-                const Text(
-                  'PixelPlay v1.0',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  'Your premium media hub for all music and video extensions.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white60),
-                ),
-                const SizedBox(height: 20),
-                const Divider(color: Colors.white10),
-                const SizedBox(height: 10),
-                const Text(
-                  'Developed with ❤️ in Flutter',
-                  style: TextStyle(fontSize: 10, color: Colors.white24),
-                ),
-                const SizedBox(height: 20),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('CLOSE', style: TextStyle(color: Color(0xFF6C63FF))),
-                ),
-              ],
+              style: const TextStyle(color: Colors.white, fontSize: 13),
             ),
           ),
-        ),
+        ],
       ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Consumer<MediaProvider>(
-      builder: (context, provider, _) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'PixelPlay',
-                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2,
-                    color: Colors.white,
-                  ),
-                ),
-                Text(
-                  'Your Ultimate Media Player',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white60,
-                  ),
-                ),
-              ],
-            ),
-            Row(
-              children: [
-                IconButton(
-                  icon: Icon(
-                    provider.showHidden ? Icons.visibility : Icons.visibility_off,
-                    color: Colors.white60,
-                  ),
-                  onPressed: () => provider.toggleShowHidden(),
-                  tooltip: 'Show/Hide Hidden Files',
-                ),
-                _buildMenu(context, provider),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMenu(BuildContext context, MediaProvider provider) {
-    return PopupMenuButton<String>(
-      icon: const Icon(Icons.more_horiz, color: Colors.white),
-      onSelected: (value) {
-        if (value == 'scan') {
-          provider.autoScanMedia();
-        } else if (value == 'playlists') {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => const PlaylistScreen()));
-        }
-      },
-      itemBuilder: (context) => [
-        const PopupMenuItem(value: 'scan', child: Text('Rescan Media')),
-        const PopupMenuItem(value: 'playlists', child: Text('Playlists')),
-      ],
     );
   }
 
   Widget _buildMediaList(BuildContext context) {
     return Consumer<MediaProvider>(
       builder: (context, provider, _) {
-        final list = provider.playlist;
+        final allItems = provider.playlist;
+        final list = _searchQuery.isEmpty 
+            ? allItems 
+            : allItems.where((item) => item.title.toLowerCase().contains(_searchQuery)).toList();
+
         if (list.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(FontAwesomeIcons.compactDisc, size: 100, color: Colors.white.withOpacity(0.1)),
-                const SizedBox(height: 20),
-                const Text('No Media Found', style: TextStyle(color: Colors.white38)),
-                const SizedBox(height: 8),
-                const Text('Tap "+" to select files or rescan', style: TextStyle(color: Colors.white24)),
-              ],
-            ),
-          );
+          return Center(child: Text(_searchQuery.isEmpty ? 'Empty Queue' : 'No matches found', style: const TextStyle(color: Colors.white38)));
         }
         
         return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
+          padding: EdgeInsets.zero,
           itemCount: list.length,
           itemBuilder: (context, index) {
             final item = list[index];
             final isCurrent = provider.currentItem == item;
             
-            return Card(
-              color: Colors.transparent,
-              elevation: 0,
-              margin: const EdgeInsets.only(bottom: 8),
+            return Container(
+              height: 70,
+              decoration: BoxDecoration(
+                border: isCurrent ? Border.all(color: const Color(0xFF00E676).withOpacity(0.5), width: 1) : null,
+                borderRadius: isCurrent ? BorderRadius.circular(8) : null,
+                color: isCurrent ? const Color(0xFF00E676).withOpacity(0.05) : Colors.transparent,
+              ),
+              margin: isCurrent ? const EdgeInsets.symmetric(horizontal: 4, vertical: 2) : EdgeInsets.zero,
               child: ListTile(
                 onTap: () => provider.playItem(item),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                tileColor: isCurrent ? Colors.white.withOpacity(0.05) : Colors.transparent,
-                leading: GlassBox(
-                  borderRadius: 12,
-                  blur: 5,
-                  opacity: 0.1,
-                  child: Container(
-                    width: 50,
-                    height: 50,
-                    alignment: Alignment.center,
-                    child: Icon(
-                      item.type == MediaType.audio ? FontAwesomeIcons.music : FontAwesomeIcons.film,
-                      color: isCurrent ? const Color(0xFF6C63FF) : (item.isHidden ? Colors.white24 : Colors.white60),
-                      size: 20,
+                dense: true,
+                leading: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.menu, 
+                      color: isCurrent ? const Color(0xFF00E676) : Colors.white24, 
+                      size: 20
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    _buildThumbnail(item, isCurrent),
+                  ],
                 ),
                 title: Text(
                   item.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
-                    color: isCurrent ? const Color(0xFF6C63FF) : (item.isHidden ? Colors.white38 : Colors.white),
+                    fontWeight: FontWeight.w500,
+                    color: isCurrent ? const Color(0xFF00E676) : Colors.white,
+                    fontSize: 14,
                   ),
                 ),
-                subtitle: Text(
-                  '${item.extension?.toUpperCase() ?? 'FILE'}${item.isHidden ? " • HIDDEN" : ""}',
-                  style: const TextStyle(color: Colors.white24, fontSize: 10),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.artist ?? 'Unknown Artist',
+                      style: TextStyle(
+                        color: isCurrent ? const Color(0xFF00E676).withOpacity(0.8) : Colors.white38, 
+                        fontSize: 11
+                      ),
+                    ),
+                    Text(
+                      item.album ?? 'Unknown Album',
+                      style: const TextStyle(color: Color(0xFF00E676), fontSize: 10),
+                    ),
+                  ],
                 ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (isCurrent && provider.isPlaying)
-                      const Icon(Icons.equalizer, color: Color(0xFF6C63FF), size: 18),
-                    _buildItemMenu(context, provider, item),
+                    Text(
+                      item.duration != null ? _formatDuration(item.duration!) : '0:00',
+                      style: const TextStyle(color: Colors.white38, fontSize: 11),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildItemMenu(context, provider, item, isCurrent),
                   ],
                 ),
               ),
@@ -470,116 +172,510 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildItemMenu(BuildContext context, MediaProvider provider, MediaItem item) {
-    return PopupMenuButton<String>(
-      icon: const Icon(Icons.more_vert, color: Colors.white24, size: 20),
-      onSelected: (value) {
-        if (value == 'hide') {
-          provider.hideItem(item);
-        } else if (value == 'unhide') {
-          provider.unhideItem(item);
-        } else if (value == 'delete') {
-          provider.removeMedia(item);
-        } else if (value == 'add_playlist') {
-          _showAddToPlaylistDialog(context, provider, item);
-        }
-      },
-      itemBuilder: (context) => [
-        if (!item.isHidden) const PopupMenuItem(value: 'hide', child: Text('Hide File')),
-        if (item.isHidden) const PopupMenuItem(value: 'unhide', child: Text('Unhide File')),
-        const PopupMenuItem(value: 'add_playlist', child: Text('Add to Playlist')),
-        const PopupMenuItem(value: 'delete', child: Text('Remove from List', style: TextStyle(color: Colors.redAccent))),
-      ],
+  Widget _buildThumbnail(MediaItem item, bool isCurrent) {
+    return Container(
+      width: 45,
+      height: 45,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      alignment: Alignment.center,
+      child: Stack(
+        children: [
+          Center(
+            child: Icon(
+              item.type == MediaType.audio ? Icons.play_arrow_rounded : Icons.videocam_rounded,
+              color: Colors.white24,
+              size: 20,
+            ),
+          ),
+          if (isCurrent)
+             const Center(
+               child: Icon(Icons.play_arrow_rounded, color: Color(0xFF00E676), size: 24),
+             ),
+        ],
+      ),
     );
   }
 
-  void _showAddToPlaylistDialog(BuildContext context, MediaProvider provider, MediaItem media) {
-    final list = provider.customPlaylists.keys.toList();
-    if (list.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No playlists available. Create one first!')));
-      return;
-    }
-    showDialog(
+  Widget _buildItemMenu(BuildContext context, MediaProvider provider, MediaItem item, bool isCurrent) {
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        color: isCurrent ? const Color(0xFF00E676) : Colors.white10,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: IconButton(
+        icon: Icon(Icons.more_horiz, color: isCurrent ? Colors.black : Colors.white70, size: 16),
+        padding: EdgeInsets.zero,
+        onPressed: () => _showItemOptions(context, provider, item),
+      ),
+    );
+  }
+
+  void _showItemOptions(BuildContext context, MediaProvider provider, MediaItem item) {
+     showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1B1B2F),
-        title: const Text('Add to Playlist'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: list.map((name) => ListTile(
-            title: Text(name),
+      backgroundColor: const Color(0xFF161616),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (context) => _SongOptionSheet(item: item, provider: provider),
+    );
+  }
+}
+
+class _QueueHeader extends StatelessWidget {
+  const _QueueHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<MediaProvider>(
+      builder: (context, provider, _) => Row(
+        children: [
+          GestureDetector(
+            onTap: () => _showPlaylistMenu(context, provider),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                   Text(
+                    provider.currentQueueName,
+                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.keyboard_arrow_down, color: Colors.white70, size: 16),
+                ],
+              ),
+            ),
+          ),
+          const Spacer(),
+          IconButton(
+            icon: const Icon(Icons.add, color: Color(0xFF00E676), size: 20),
+            onPressed: () => _showCreatePlaylistDialog(context, provider),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPlaylistMenu(BuildContext context, MediaProvider provider) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF161616),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Text('Select Queue / Playlist', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
+          ),
+          ListTile(
+            leading: const Icon(Icons.library_music_outlined, color: Colors.white70),
+            title: const Text('Library Queue (All Tracks)', style: TextStyle(color: Colors.white)),
             onTap: () {
-              provider.addToPlaylist(name, media);
+              provider.resetToLibrary();
               Navigator.pop(context);
             },
-          )).toList(),
+          ),
+          ...provider.customPlaylists.keys.map((name) => ListTile(
+            leading: const Icon(Icons.playlist_play, color: Color(0xFF00E676)),
+            title: Text(name, style: const TextStyle(color: Colors.white)),
+            onTap: () {
+              provider.loadPlaylist(name);
+              Navigator.pop(context);
+            },
+          )),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  void _showCreatePlaylistDialog(BuildContext context, MediaProvider provider) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFF161616),
+        title: const Text('Create New Playlist', style: TextStyle(color: Colors.white, fontSize: 16)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
+            hintText: 'Playlist name...',
+            hintStyle: TextStyle(color: Colors.white24),
+            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white10)),
+            focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF00E676))),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel', style: TextStyle(color: Colors.white38))),
+          TextButton(
+            onPressed: () {
+              if (controller.text.isNotEmpty) {
+                provider.createPlaylist(controller.text);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Playlist "${controller.text}" created!')));
+              }
+            },
+            child: const Text('Create', style: TextStyle(color: Color(0xFF00E676))),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QueueControls extends StatelessWidget {
+  const _QueueControls();
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<MediaProvider>(
+      builder: (context, provider, _) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                IconButton(
+                  icon: Icon(provider.isPlaying ? Icons.pause : Icons.play_arrow, color: Colors.white70, size: 24),
+                  onPressed: () => provider.togglePlayback(),
+                ),
+                const SizedBox(width: 24),
+                const Icon(Icons.short_text, color: Colors.white70, size: 24),
+                const Spacer(),
+                Text('${provider.playlist.length} / ${provider.playlist.length}', style: const TextStyle(color: Colors.white30, fontSize: 11)),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.save_outlined, color: Color(0xFF00E676), size: 20),
+                  onPressed: () => _showSavePlaylistDialog(context, provider),
+                ),
+                const SizedBox(width: 8),
+                const Icon(Icons.more_horiz, color: Colors.white70, size: 20),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.alarm, color: Colors.white30, size: 12),
+                const SizedBox(width: 4),
+                _buildTotalDuration(provider),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildMiniPlayer(BuildContext context) {
-    return Consumer<MediaProvider>(
-      builder: (context, provider, _) {
-        if (provider.currentItem == null) return const SizedBox.shrink();
-        
-        return Positioned(
-          left: 16,
-          right: 16,
-          bottom: 24,
-          child: GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const PlayerScreen()),
-              );
+  Widget _buildTotalDuration(MediaProvider provider) {
+    int totalSec = 0;
+    for (var item in provider.playlist) {
+      totalSec += item.duration?.inSeconds ?? 0;
+    }
+    final d = Duration(seconds: totalSec);
+    final h = d.inHours;
+    final m = d.inMinutes % 60;
+    final s = d.inSeconds % 60;
+    final timeStr = h > 0 ? '$h:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}' : '$m:${s.toString().padLeft(2, '0')}';
+    return Text(timeStr, style: const TextStyle(color: Colors.white30, fontSize: 11));
+  }
+
+  void _showSavePlaylistDialog(BuildContext context, MediaProvider provider) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFF161616),
+        title: const Text('Save Queue as Playlist', style: TextStyle(color: Colors.white, fontSize: 16)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
+            hintText: 'Playlist name...',
+            hintStyle: TextStyle(color: Colors.white24),
+            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white10)),
+            focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF00E676))),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel', style: TextStyle(color: Colors.white38))),
+          TextButton(
+            onPressed: () {
+              if (controller.text.isNotEmpty) {
+                provider.saveQueueAsPlaylist(controller.text);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Playlist "${controller.text}" saved!')));
+              }
             },
-            child: GlassBox(
-              blur: 15,
-              opacity: 0.15,
-              borderRadius: 20,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            provider.currentItem!.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 4),
-                          LinearProgressIndicator(
-                            value: provider.duration.inMilliseconds > 0 
-                                ? provider.position.inMilliseconds / provider.duration.inMilliseconds 
-                                : 0,
-                            backgroundColor: Colors.white10,
-                            valueColor: const AlwaysStoppedAnimation(Color(0xFF6C63FF)),
-                            minHeight: 2,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    IconButton(
-                      icon: Icon(
-                        provider.isPlaying ? Icons.pause : Icons.play_arrow,
-                        color: Colors.white,
-                      ),
-                      onPressed: () => provider.togglePlayback(),
-                    ),
-                  ],
+            child: const Text('Save', style: TextStyle(color: Color(0xFF00E676))),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SongOptionSheet extends StatelessWidget {
+  final MediaItem item;
+  final MediaProvider provider;
+
+  const _SongOptionSheet({required this.item, required this.provider});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  item.title,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
+              const Icon(Icons.favorite_border, color: Colors.white70, size: 20),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Flexible(
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                _optionTile(context, Icons.info_outline, 'Song info', () => _showSongInfo(context)),
+                _optionTile(context, Icons.remove_circle_outline, 'Remove from this queue', () {
+                   provider.removeMedia(item);
+                   Navigator.pop(context);
+                }, color: Colors.redAccent),
+                _optionTile(context, Icons.play_arrow_outlined, 'Play after current song', () {
+                   provider.playAfterCurrent(item);
+                   Navigator.pop(context);
+                }),
+                _optionTile(context, Icons.playlist_add, 'Add to a queue', () => _showAddToQueueDialog(context)),
+                _optionTile(context, Icons.add_to_photos_outlined, 'Add to playlists', () => _showAddToPlaylist(context)),
+                _optionTile(context, Icons.play_circle_outline, 'Preview', () {
+                   provider.playItem(item);
+                   Navigator.pop(context);
+                }),
+                _optionTile(context, Icons.edit_outlined, 'Edit tags', () => _showEditTagsDialog(context)),
+                _optionTile(context, Icons.speed, 'Play speed and Pitch', () => _showPlaybackSpeedDialog(context)),
+                _optionTile(context, Icons.delete_outline, 'Delete permanently', () => _showDeleteDialog(context), color: Colors.redAccent),
+              ],
             ),
           ),
-        );
+        ],
+      ),
+    );
+  }
+
+  void _showEditTagsDialog(BuildContext context) {
+    final titleC = TextEditingController(text: item.title);
+    final artistC = TextEditingController(text: item.artist);
+    final albumC = TextEditingController(text: item.album);
+    
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFF161616),
+        title: const Text('Edit Tags', style: TextStyle(color: Colors.white, fontSize: 16)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _editField(titleC, 'Title'),
+            _editField(artistC, 'Artist'),
+            _editField(albumC, 'Album'),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel', style: TextStyle(color: Colors.white38))),
+          TextButton(
+            onPressed: () {
+              provider.updateMediaMetadata(item, title: titleC.text, artist: artistC.text, album: albumC.text);
+              Navigator.pop(context);
+              Navigator.pop(context);
+            },
+            child: const Text('Save', style: TextStyle(color: Color(0xFF00E676))),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPlaybackSpeedDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFF161616),
+        title: const Text('Playback Speed', style: TextStyle(color: Colors.white, fontSize: 16)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _speedOption('0.5x', 0.5),
+            _speedOption('1.0x (Normal)', 1.0),
+            _speedOption('1.5x', 1.5),
+            _speedOption('2.0x', 2.0),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddToQueueDialog(BuildContext context) {
+    // For now, this just means "Add to the end of the queue" but since it's already in queue
+    // we just show a message. In "Musicolet", it can mean different queues.
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Item is already in the current media library queue.')));
+    Navigator.pop(context);
+  }
+
+  Widget _editField(TextEditingController c, String hint) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        controller: c,
+        style: const TextStyle(color: Colors.white, fontSize: 14),
+        decoration: InputDecoration(
+          labelText: hint,
+          labelStyle: const TextStyle(color: Colors.white38),
+          enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white10)),
+          focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF00E676))),
+        ),
+      ),
+    );
+  }
+
+  Widget _speedOption(String label, double value) {
+    return ListTile(
+      title: Text(label, style: const TextStyle(color: Colors.white)),
+      onTap: () {
+        provider.setRate(value);
+        Navigator.pop(provider.player.state.playing ? provider.player.state.playing as dynamic : null); // Simple pop
       },
+    );
+  }
+
+  void _showSongInfo(BuildContext context) {
+    String size = 'Unknown';
+    try {
+      final file = File(item.path);
+      if (file.existsSync()) {
+        final bytes = file.lengthSync();
+        if (bytes < 1024) size = '$bytes B';
+        else if (bytes < 1024 * 1024) size = '${(bytes / 1024).toStringAsFixed(1)} KB';
+        else size = '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+      }
+    } catch (_) {}
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFF161616),
+        title: const Text('Song Info', style: TextStyle(color: Colors.white, fontSize: 16)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _infoRow('Title', item.title),
+            _infoRow('Artist', item.artist ?? 'Unknown'),
+            _infoRow('Album', item.album ?? 'Unknown'),
+            _infoRow('Duration', _formatDuration(item.duration ?? Duration.zero)),
+            _infoRow('Size', size),
+            _infoRow('Path', item.path),
+            _infoRow('Type', item.type.toString().split('.').last.toUpperCase()),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK', style: TextStyle(color: Color(0xFF00E676)))),
+        ],
+      ),
+    );
+  }
+
+  void _showAddToPlaylist(BuildContext context) {
+    if (provider.customPlaylists.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No custom playlists found. Create one first!')));
+      return;
+    }
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF161616),
+      builder: (_) => ListView.builder(
+        shrinkWrap: true,
+        itemCount: provider.customPlaylists.length,
+        itemBuilder: (_, i) {
+          final name = provider.customPlaylists.keys.elementAt(i);
+          return ListTile(
+            title: Text(name, style: const TextStyle(color: Colors.white)),
+            onTap: () {
+              provider.addToPlaylist(name, item);
+              Navigator.pop(context);
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Added to "$name"')));
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  void _showDeleteDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFF161616),
+        title: const Text('Delete File', style: TextStyle(color: Colors.white, fontSize: 16)),
+        content: const Text('Are you sure you want to delete this file permanently?', style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel', style: TextStyle(color: Colors.white38))),
+          TextButton(
+            onPressed: () {
+              provider.removeMedia(item);
+              Navigator.pop(context);
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Media removed from library')));
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.white38, fontSize: 10)),
+          Text(value, style: const TextStyle(color: Colors.white, fontSize: 13), overflow: TextOverflow.ellipsis, maxLines: 2),
+        ],
+      ),
+    );
+  }
+
+  Widget _optionTile(BuildContext context, IconData icon, String label, VoidCallback onTap, {Color? color}) {
+    return ListTile(
+      leading: Icon(icon, color: color ?? Colors.white70, size: 20),
+      title: Text(label, style: TextStyle(color: color ?? Colors.white, fontSize: 14)),
+      dense: true,
+      onTap: onTap,
     );
   }
 }

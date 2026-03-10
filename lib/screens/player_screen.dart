@@ -31,303 +31,227 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          // Background Gradient (only for audio)
-          if (item.type == MediaType.audio)
-            Positioned.fill(
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color(0xFF0F0F1A),
-                      Color(0xFF1B1B2F),
-                      Color(0xFF0F0F1A),
-                    ],
-                  ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildAppBar(context, item),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    const SizedBox(height: 20),
+                    _buildArtwork(item),
+                    const SizedBox(height: 40),
+                    _buildMetadata(item),
+                    const SizedBox(height: 20),
+                    _buildSecondaryActions(),
+                    const SizedBox(height: 30),
+                    _buildProgressBar(provider),
+                    const SizedBox(height: 30),
+                    _buildMainControls(provider),
+                  ],
                 ),
               ),
             ),
-          
-          SafeArea(
-            child: Column(
-              children: [
-                _buildAppBar(context, item),
-                if (item.type == MediaType.video)
-                  Expanded(
-                    child: Center(
-                      child: Video(controller: provider.videoController),
-                    ),
-                  )
-                else ...[
-                  const Spacer(),
-                  _buildPlayerArea(provider, item),
-                  const Spacer(),
-                  Visualizer(isPlaying: provider.isPlaying),
-                  const Spacer(),
-                ],
-                _buildControls(context, provider),
-                const SizedBox(height: 48),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildAppBar(BuildContext context, MediaItem item) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 8.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 30),
+            icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white70, size: 28),
             onPressed: () => Navigator.pop(context),
           ),
-          Expanded(
-            child: Column(
-              children: [
-                Text(
-                  item.type == MediaType.video ? 'WATCHING MOVIE' : 'LISTENING TO MUSIC',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.white38,
-                    letterSpacing: 2,
-                  ),
-                ),
-                Text(
-                  item.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-              ],
-            ),
-          ),
+          const Spacer(),
           IconButton(
-            icon: const Icon(Icons.tune, color: Colors.white),
-            onPressed: () => _showEqualizer(context),
-            tooltip: 'Equalizer',
+            icon: const Icon(Icons.settings_outlined, color: Colors.white70, size: 24),
+            onPressed: () {},
           ),
         ],
       ),
     );
   }
 
-  void _showEqualizer(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => GlassBox(
-        borderRadius: 20,
-        blur: 20,
-        opacity: 0.1,
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('EQUALIZER', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 2)),
-              const SizedBox(height: 20),
-              SizedBox(
-                height: 200,
-                child: Consumer<MediaProvider>(
-                  builder: (context, provider, _) => ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: 10,
-                    itemBuilder: (context, index) {
-                      return Column(
-                        children: [
-                          Expanded(
-                            child: RotatedBox(
-                              quarterTurns: 3,
-                              child: SliderTheme(
-                                data: SliderTheme.of(context).copyWith(
-                                  trackHeight: 2,
-                                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 4),
-                                ),
-                                child: Slider(
-                                  value: provider.equalizerGains[index],
-                                  min: -10,
-                                  max: 10,
-                                  onChanged: (val) => provider.updateEqualizer(index, val),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Text(
-                            ['31','62','125','250','500','1k','2k','4k','8k','16k'][index],
-                            style: const TextStyle(fontSize: 8, color: Colors.white38),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ],
-          ),
+  Widget _buildArtwork(MediaItem item) {
+    return Container(
+      width: 320,
+      height: 320,
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Center(
+        child: Icon(
+          item.type == MediaType.audio ? Icons.play_arrow_rounded : Icons.videocam_rounded,
+          size: 160,
+          color: Colors.white12,
         ),
       ),
     );
   }
 
-  Widget _buildPlayerArea(MediaProvider provider, MediaItem item) {
-    return Column(
-      children: [
-        // Audio Visualization placeholder
-        Container(
-          height: 250,
-          width: 250,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF6C63FF).withOpacity(0.3),
-                blurRadius: 40,
-                spreadRadius: 10,
-              ),
-            ],
+  Widget _buildMetadata(MediaItem item) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32.0),
+      child: Column(
+        children: [
+          Text(
+            item.title,
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
-          child: GlassBox(
-            borderRadius: 125,
-            opacity: 0.1,
-            child: Center(
-              child: Icon(
-                FontAwesomeIcons.compactDisc,
-                size: 150,
-                color: provider.isPlaying ? const Color(0xFF6C63FF) : Colors.white24,
-              ),
-            ),
+          const SizedBox(height: 8),
+          Text(
+            item.artist ?? 'Unknown Artist',
+            style: const TextStyle(color: Colors.white70, fontSize: 14),
           ),
-        ),
-        const SizedBox(height: 40),
-        Text(
-          item.title,
-          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'High Fidelity Audio',
-          style: TextStyle(color: Colors.white38),
-        ),
-      ],
+          const SizedBox(height: 4),
+          Text(
+            item.album ?? 'Unknown Album',
+            style: const TextStyle(color: Color(0xFF00E676), fontSize: 13),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildControls(BuildContext context, MediaProvider provider) {
+  Widget _buildSecondaryActions() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _actionIcon(Icons.favorite_border),
+          _actionIcon(Icons.info_outline),
+          _actionIcon(Icons.playlist_add),
+          _actionIcon(Icons.more_horiz),
+        ],
+      ),
+    );
+  }
+
+  Widget _actionIcon(IconData icon) {
+    return Icon(icon, color: Colors.white70, size: 22);
+  }
+
+  Widget _buildProgressBar(MediaProvider provider) {
     final currentPos = provider.position.inMilliseconds.toDouble();
     final totalDur = provider.duration.inMilliseconds.toDouble();
     
+    double progressValue = 0;
+    if (!_isDragging) {
+      if (totalDur > 0) progressValue = currentPos / totalDur;
+    } else {
+      progressValue = _dragValue;
+    }
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+      padding: const EdgeInsets.symmetric(horizontal: 32.0),
       child: Column(
         children: [
-          _buildSlider(context, provider),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              activeTrackColor: Colors.white,
+              inactiveTrackColor: Colors.white10,
+              thumbColor: Colors.white,
+              overlayColor: Colors.white10,
+              trackHeight: 3,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+            ),
+            child: Slider(
+              value: progressValue.clamp(0.0, 1.0),
+              onChanged: (val) {
+                setState(() {
+                  _isDragging = true;
+                  _dragValue = val;
+                });
+              },
+              onChangeEnd: (val) {
+                final target = Duration(milliseconds: (val * totalDur).toInt());
+                provider.seek(target);
+                setState(() {
+                  _isDragging = false;
+                });
+              },
+            ),
+          ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   _formatDuration(provider.position),
-                  style: const TextStyle(color: Colors.white38, fontSize: 12),
+                  style: const TextStyle(color: Colors.white30, fontSize: 11),
                 ),
                 Text(
                   _formatDuration(provider.duration),
-                  style: const TextStyle(color: Colors.white38, fontSize: 12),
+                  style: const TextStyle(color: Colors.white30, fontSize: 11),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              IconButton(
-                icon: const Icon(FontAwesomeIcons.shuffle, size: 20, color: Colors.white38),
-                onPressed: () {},
-              ),
-              IconButton(
-                icon: const Icon(FontAwesomeIcons.backwardStep, size: 24, color: Colors.white),
-                onPressed: () {},
-              ),
-              GestureDetector(
-                onTap: () => provider.togglePlayback(),
-                child: Container(
-                  height: 80,
-                  width: 80,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF6C63FF),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Color(0xFF6C63FF),
-                        blurRadius: 20,
-                        offset: Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    provider.isPlaying ? Icons.pause : Icons.play_arrow,
-                    size: 40,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-              IconButton(
-                icon: const Icon(FontAwesomeIcons.forwardStep, size: 24, color: Colors.white),
-                onPressed: () {},
-              ),
-              IconButton(
-                icon: const Icon(FontAwesomeIcons.repeat, size: 20, color: Colors.white38),
-                onPressed: () {},
-              ),
-            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSlider(BuildContext context, MediaProvider provider) {
-    double value = 0;
-    if (!_isDragging) {
-      if (provider.duration.inMilliseconds > 0) {
-        value = provider.position.inMilliseconds / provider.duration.inMilliseconds;
-      }
-    } else {
-      value = _dragValue;
-    }
-
-    return SliderTheme(
-      data: SliderTheme.of(context).copyWith(
-        activeTrackColor: const Color(0xFF6C63FF),
-        inactiveTrackColor: Colors.white10,
-        thumbColor: Colors.white,
-        overlayColor: const Color(0xFF6C63FF).withOpacity(0.2),
-        trackHeight: 4,
-        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-      ),
-      child: Slider(
-        value: value.clamp(0.0, 1.0),
-        onChanged: (val) {
-          setState(() {
-            _isDragging = true;
-            _dragValue = val;
-          });
-        },
-        onChangeEnd: (val) {
-          final target = Duration(milliseconds: (val * provider.duration.inMilliseconds).toInt());
-          provider.seek(target);
-          setState(() {
-            _isDragging = false;
-          });
-        },
+  Widget _buildMainControls(MediaProvider provider) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.volume_up, color: Colors.white38, size: 20),
+            onPressed: () {},
+          ),
+          IconButton(
+            icon: const Icon(Icons.skip_previous, color: Colors.white, size: 36),
+            onPressed: () => provider.playPrevious(),
+          ),
+          IconButton(
+            icon: const Icon(Icons.fast_rewind_outlined, color: Colors.white38, size: 24),
+            onPressed: () => provider.seek(provider.position - const Duration(seconds: 10)),
+          ),
+          GestureDetector(
+            onTap: () => provider.togglePlayback(),
+            child: Container(
+              height: 50,
+              width: 50,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                provider.isPlaying ? Icons.pause : Icons.play_arrow,
+                size: 32,
+                color: Colors.black,
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.fast_forward_outlined, color: Colors.white38, size: 24),
+            onPressed: () => provider.seek(provider.position + const Duration(seconds: 10)),
+          ),
+          IconButton(
+            icon: const Icon(Icons.skip_next, color: Colors.white, size: 36),
+            onPressed: () => provider.skipNext(),
+          ),
+          IconButton(
+            icon: const Icon(Icons.bar_chart, color: Colors.white38, size: 20),
+            onPressed: () {},
+          ),
+        ],
       ),
     );
   }

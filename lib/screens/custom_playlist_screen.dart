@@ -136,51 +136,45 @@ class PlaylistScreen extends StatelessWidget {
     );
   }
 
-  void _showPlaylistItems(BuildContext context, String name, List<String> p, MediaProvider prov) {
+  void _showPlaylistItems(BuildContext context, String name, List<String> paths, MediaProvider provider) {
+    // Find MediaItems matching these paths from the current library
+    final items = provider.playlist.where((i) => paths.contains(i.path)).toList();
+    
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => Consumer<MediaProvider>(
-          builder: (context, provider, _) {
-            final paths = provider.customPlaylists[name] ?? [];
-            final items = provider.allScannedItems.where((i) => paths.contains(i.path)).toList();
-            
-            return Scaffold(
-              backgroundColor: Colors.black,
-              appBar: AppBar(
-                title: Text(name.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                backgroundColor: Colors.black,
-                actions: [
-                   IconButton(
-                     icon: const Icon(Icons.play_circle_fill, color: Color(0xFF00E676)),
-                     onPressed: () {
-                        provider.loadPlaylist(name);
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Loaded "$name" to Queue')));
-                        Navigator.pop(context);
-                     },
-                   ),
-                ],
-              ),
-              body: items.isEmpty 
-                ? const Center(child: Text('Playlist is empty', style: TextStyle(color: Colors.white24)))
-                : ListView.builder(
-                    itemCount: items.length,
-                    itemBuilder: (context, index) {
-                      final item = items[index];
-                      return ListTile(
-                        onTap: () => provider.playItem(item),
-                        leading: const Icon(Icons.music_note, color: Colors.white24),
-                        title: Text(item.title, style: const TextStyle(color: Colors.white, fontSize: 14)),
-                        subtitle: Text(item.artist ?? 'Unknown', style: const TextStyle(color: Colors.white30, fontSize: 11)),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 18),
-                          onPressed: () => provider.removeFromPlaylist(name, item.path),
-                        ),
-                      );
-                    },
-                  ),
-            );
-          },
+        builder: (_) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            title: Text(name.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            backgroundColor: Colors.black,
+            actions: [
+               IconButton(
+                 icon: const Icon(Icons.play_circle_fill, color: Color(0xFF00E676)),
+                 onPressed: () {
+                    // Logic to "load" this playlist as the current queue
+                    // For now we just play the first item
+                    if (items.isNotEmpty) provider.playItem(items.first);
+                 },
+               ),
+            ],
+          ),
+          body: ListView.builder(
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              final item = items[index];
+              return ListTile(
+                onTap: () => provider.playItem(item),
+                leading: const Icon(Icons.music_note, color: Colors.white24),
+                title: Text(item.title, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                subtitle: Text(item.artist ?? 'Unknown', style: const TextStyle(color: Colors.white30, fontSize: 11)),
+                trailing: IconButton(
+                  icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 18),
+                  onPressed: () => provider.removeFromPlaylist(name, item.path),
+                ),
+              );
+            },
+          ),
         ),
       ),
     );

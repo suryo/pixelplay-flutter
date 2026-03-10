@@ -6,6 +6,9 @@ class MediaItem {
   final String? extension;
   final MediaType type;
   final String? thumbnail;
+  final String? artist;
+  final String? album;
+  final Duration? duration;
   bool isHidden;
   
   MediaItem({
@@ -14,6 +17,9 @@ class MediaItem {
     required this.type,
     this.extension,
     this.thumbnail,
+    this.artist,
+    this.album,
+    this.duration,
     this.isHidden = false,
   });
 

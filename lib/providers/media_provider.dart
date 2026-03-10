@@ -13,7 +13,9 @@ class MediaProvider extends ChangeNotifier {
   late VideoController videoController;
   
   List<MediaItem> _playlist = [];
-  Map<String, List<String>> _customPlaylists = {}; // Name -> List of paths
+  List<MediaItem> _allScannedItems = []; 
+  String _currentQueueName = 'Library Queue';
+  Map<String, List<String>> _customPlaylists = {}; 
   Set<String> _hiddenPaths = {};
   bool _showHidden = false;
   
@@ -21,17 +23,53 @@ class MediaProvider extends ChangeNotifier {
   bool _isPlaying = false;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
-
-  // Equalizer gains (31Hz to 16kHz)
   List<double> equalizerGains = List.filled(10, 0.0);
 
   List<MediaItem> get playlist => _playlist.where((item) => _showHidden || !item.isHidden).toList();
+  String get currentQueueName => _currentQueueName;
   MediaItem? get currentItem => _currentItem;
   bool get isPlaying => _isPlaying;
   Duration get position => _position;
   Duration get duration => _duration;
   bool get showHidden => _showHidden;
   Map<String, List<String>> get customPlaylists => _customPlaylists;
+  List<MediaItem> get allScannedItems => _allScannedItems;
+
+  Map<String, List<MediaItem>> get folders {
+    final Map<String, List<MediaItem>> folderMap = {};
+    for (var item in playlist) {
+      final parentPath = File(item.path).parent.path;
+      if (!folderMap.containsKey(parentPath)) {
+        folderMap[parentPath] = [];
+      }
+      folderMap[parentPath]!.add(item);
+    }
+    return folderMap;
+  }
+
+  Map<String, List<MediaItem>> get albums {
+    final Map<String, List<MediaItem>> albumMap = {};
+    for (var item in playlist) {
+      final albumName = item.album ?? 'Unknown Album';
+      if (!albumMap.containsKey(albumName)) {
+        albumMap[albumName] = [];
+      }
+      albumMap[albumName]!.add(item);
+    }
+    return albumMap;
+  }
+
+  Map<String, List<MediaItem>> get artists {
+    final Map<String, List<MediaItem>> artistMap = {};
+    for (var item in playlist) {
+      final artistName = item.artist ?? 'Unknown Artist';
+      if (!artistMap.containsKey(artistName)) {
+        artistMap[artistName] = [];
+      }
+      artistMap[artistName]!.add(item);
+    }
+    return artistMap;
+  }
 
   MediaProvider() {
     videoController = VideoController(player);
@@ -90,29 +128,45 @@ class MediaProvider extends ChangeNotifier {
       type: RequestType.audio | RequestType.video,
     );
 
-    List<MediaItem> scannedItems = [];
+    Map<String, MediaItem> uniqueScanned = {};
     for (var path in paths) {
       List<AssetEntity> entities = await path.getAssetListRange(start: 0, end: 1000);
       for (var entity in entities) {
-        // Skip if for some reason it's an image
         if (entity.type == AssetType.image) continue;
 
         File? file = await entity.file;
-        if (file != null) {
+        if (file != null && !uniqueScanned.containsKey(file.path)) {
           final ext = file.path.split('.').last;
           final isHidden = _hiddenPaths.contains(file.path) || file.path.split('/').last.startsWith('.');
-          scannedItems.add(MediaItem(
+          uniqueScanned[file.path] = MediaItem(
             title: entity.title ?? file.path.split('/').last,
             path: file.path,
             extension: ext,
             type: entity.type == AssetType.audio ? MediaType.audio : MediaType.video,
             isHidden: isHidden,
-          ));
+          );
         }
       }
     }
     
-    _playlist = scannedItems;
+    _allScannedItems = uniqueScanned.values.toList();
+    _playlist = List.from(_allScannedItems);
+    _currentQueueName = 'Library Queue';
+    notifyListeners();
+  }
+
+  void loadPlaylist(String name) {
+    if (_customPlaylists.containsKey(name)) {
+      final paths = _customPlaylists[name]!;
+      _playlist = _allScannedItems.where((item) => paths.contains(item.path)).toList();
+      _currentQueueName = name;
+      notifyListeners();
+    }
+  }
+
+  void resetToLibrary() {
+    _playlist = List.from(_allScannedItems);
+    _currentQueueName = 'Library Queue';
     notifyListeners();
   }
 
@@ -224,7 +278,8 @@ class MediaProvider extends ChangeNotifier {
 
   void playItem(MediaItem item) {
     _currentItem = item;
-    player.open(Media(item.path));
+    final uri = item.path.startsWith('http') ? item.path : Uri.file(item.path).toString();
+    player.open(Media(uri));
     player.play();
     notifyListeners();
   }
@@ -233,7 +288,11 @@ class MediaProvider extends ChangeNotifier {
     if (player.state.playing) {
       player.pause();
     } else {
-      player.play();
+      if (_currentItem == null && _playlist.isNotEmpty) {
+        playItem(_playlist.first);
+      } else {
+        player.play();
+      }
     }
   }
 
@@ -241,21 +300,110 @@ class MediaProvider extends ChangeNotifier {
     player.seek(position);
   }
 
+  void playAfterCurrent(MediaItem item) {
+    if (_currentItem == null) {
+      playItem(item);
+      return;
+    }
+    final index = _playlist.indexOf(_currentItem!);
+    if (!_playlist.contains(item)) {
+      _playlist.insert(index + 1, item);
+    } else {
+      final oldIndex = _playlist.indexOf(item);
+      _playlist.removeAt(oldIndex);
+      final newIndex = _playlist.indexOf(_currentItem!);
+      _playlist.insert(newIndex + 1, item);
+    }
+    notifyListeners();
+  }
+
+  void saveQueueAsPlaylist(String name) {
+    _customPlaylists[name] = _playlist.map((e) => e.path).toSet().toList();
+    _savePreferences();
+    notifyListeners();
+  }
+
+  void skipNext() {
+    _playNext();
+  }
+
+  void playPrevious() {
+    final currentList = playlist;
+    if (_currentItem == null || currentList.isEmpty) return;
+    int index = currentList.indexWhere((e) => e.path == _currentItem!.path);
+    if (index > 0) {
+      playItem(currentList[index - 1]);
+    } else {
+      // Loop to end or just stay at beginning
+       playItem(currentList.last);
+    }
+  }
+
   void _playNext() {
     final currentList = playlist;
     if (_currentItem == null || currentList.isEmpty) return;
-    int index = currentList.indexOf(_currentItem!);
+    int index = currentList.indexWhere((e) => e.path == _currentItem!.path);
     if (index < currentList.length - 1) {
       playItem(currentList[index + 1]);
+    } else {
+      // Loop to beginning if at end? Optional. Let's loop.
+      playItem(currentList.first);
     }
   }
 
   void removeMedia(MediaItem item) {
-    _playlist.remove(item);
-    if (_currentItem == item) {
+    _playlist.removeWhere((e) => e.path == item.path);
+    _allScannedItems.removeWhere((e) => e.path == item.path);
+    
+    // Also remove from all custom playlists
+    _customPlaylists.forEach((name, paths) {
+      paths.remove(item.path);
+    });
+
+    if (_currentItem?.path == item.path) {
       player.stop();
       _currentItem = null;
     }
+    _savePreferences();
+    notifyListeners();
+  }
+
+  void updateMediaMetadata(MediaItem item, {String? title, String? artist, String? album}) {
+    final updateInList = (List<MediaItem> list) {
+       final idx = list.indexWhere((e) => e.path == item.path);
+       if(idx != -1) {
+          list[idx] = MediaItem(
+            title: title ?? list[idx].title,
+            path: list[idx].path,
+            type: list[idx].type,
+            extension: list[idx].extension,
+            thumbnail: list[idx].thumbnail,
+            artist: artist ?? list[idx].artist,
+            album: album ?? list[idx].album,
+            duration: list[idx].duration,
+            isHidden: list[idx].isHidden,
+          );
+       }
+    };
+    
+    updateInList(_playlist);
+    updateInList(_allScannedItems);
+    
+    if (_currentItem?.path == item.path) {
+       _currentItem = _allScannedItems.firstWhere((e) => e.path == item.path);
+    }
+    
+    _savePreferences();
+    notifyListeners();
+  }
+
+  void setRate(double rate) {
+    player.setRate(rate);
+    notifyListeners();
+  }
+
+  void setPitch(double pitch) {
+    player.setPitch(pitch);
     notifyListeners();
   }
 

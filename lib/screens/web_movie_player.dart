@@ -54,9 +54,10 @@ class _WebMoviePlayerState extends State<WebMoviePlayer> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: Text(widget.title, style: const TextStyle(fontSize: 14)),
+        title: Text(widget.title.toUpperCase(), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.white70)),
         backgroundColor: Colors.black,
         elevation: 0,
+        centerTitle: true,
       ),
       body: Stack(
         children: [
@@ -64,7 +65,7 @@ class _WebMoviePlayerState extends State<WebMoviePlayer> {
           if (_isLoading)
             const Center(
               child: CircularProgressIndicator(
-                color: Color(0xFF6C63FF),
+                color: Color(0xFF00E676),
               ),
             ),
         ],

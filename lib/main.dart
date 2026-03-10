@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:pixelplay/providers/media_provider.dart';
 import 'package:pixelplay/screens/home_screen.dart';
+import 'package:pixelplay/screens/main_shell.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,19 +31,25 @@ class PixelPlayApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF0F0F1A),
-        primaryColor: const Color(0xFF6C63FF),
+        scaffoldBackgroundColor: Colors.black,
+        primaryColor: const Color(0xFF00E676),
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF6C63FF),
+          seedColor: const Color(0xFF00E676),
           brightness: Brightness.dark,
-          secondary: const Color(0xFF00D2FF),
+          surface: Colors.black,
+          onSurface: Colors.white,
+          primary: const Color(0xFF00E676),
+          secondary: const Color(0xFF00E676),
         ),
-        textTheme: GoogleFonts.outfitTextTheme(
+        textTheme: GoogleFonts.robotoTextTheme(
           ThemeData.dark().textTheme,
+        ).apply(
+          bodyColor: Colors.white,
+          displayColor: Colors.white,
         ),
         useMaterial3: true,
       ),
-      home: const HomeScreen(),
+      home: const MainShell(),
     );
   }
 }

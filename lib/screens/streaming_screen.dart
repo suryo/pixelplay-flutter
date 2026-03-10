@@ -79,33 +79,22 @@ class _StreamingScreenState extends State<StreamingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0C0C14),
+      backgroundColor: Colors.black,
       appBar: AppBar(
-        title: Text(widget.sourceName, style: const TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.transparent,
+        title: Text(widget.sourceName.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.5, fontSize: 14, color: Colors.white70)),
+        backgroundColor: Colors.black,
         elevation: 0,
+        centerTitle: true,
       ),
-      body: Stack(
-        children: [
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF0F0F1A), Color(0xFF1B1B2F)],
-              ),
-            ),
-          ),
-          if (_isLoading && _movies.isEmpty)
-            const Center(child: CircularProgressIndicator(color: Color(0xFF6C63FF)))
-          else
-            Padding(
+      body: _isLoading && _movies.isEmpty
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF00E676)))
+          : Padding(
               padding: const EdgeInsets.all(12.0),
               child: GridView.builder(
                 controller: _scrollController,
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  childAspectRatio: 0.7,
+                  childAspectRatio: 0.65,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
                 ),
@@ -116,8 +105,6 @@ class _StreamingScreenState extends State<StreamingScreen> {
                 },
               ),
             ),
-        ],
-      ),
     );
   }
 
@@ -132,8 +119,16 @@ class _StreamingScreenState extends State<StreamingScreen> {
     String title = movie['title'] ?? movie['bookName'] ?? 'Unknown';
     title = title.replaceAll(RegExp(r'\s+'), ' ').trim();
     
+    // Show a loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator(color: Color(0xFF00E676))),
+    );
+
     // For DramaBos items, we don't have a direct player API, so send them to the detail page.
     if (movie['bookId'] != null) {
+      if (mounted) Navigator.pop(context);
       final playerUrl = 'https://dramabox.dramabos.my.id/?bookId=${movie['bookId']}';
       Navigator.push(
         context,
@@ -147,12 +142,6 @@ class _StreamingScreenState extends State<StreamingScreen> {
       return;
     }
     
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator(color: Color(0xFF6C63FF))),
-    );
-
     try {
       final detailUrl = 'https://zeldvorik.ru/rebahin21/api.php?action=detail&slug=${movie['slug']}';
       final response = await http.get(Uri.parse(detailUrl));
@@ -204,75 +193,81 @@ class _StreamingScreenState extends State<StreamingScreen> {
     
     return GestureDetector(
       onTap: () => _playMovie(movie),
-      child: GlassBox(
-        borderRadius: 16,
-        opacity: 0.1,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    if (thumbnailUrl.isNotEmpty)
-                      Image.network(
-                        thumbnailUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => const Center(child: Icon(Icons.movie, size: 50, color: Colors.white24)),
-                      )
-                    else
-                      const Center(child: Icon(Icons.movie, size: 50, color: Colors.white24)),
-                    if (rating != 'N/A')
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.black87,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.star, color: Colors.amber, size: 10),
-                              const SizedBox(width: 4),
-                              Text(
-                                rating,
-                                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (thumbnailUrl.isNotEmpty)
+                    Image.network(
+                      thumbnailUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        color: Colors.white.withOpacity(0.05),
+                        child: const Center(child: Icon(Icons.movie, size: 40, color: Colors.white10)),
+                      ),
+                    )
+                  else
+                    Container(
+                      color: Colors.white.withOpacity(0.05),
+                      child: const Center(child: Icon(Icons.movie, size: 40, color: Colors.white10)),
+                    ),
+                  if (rating != 'N/A')
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.black87,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.white10, width: 0.5),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.star, color: Colors.amber, size: 10),
+                            const SizedBox(width: 4),
+                            Text(
+                              rating,
+                              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                          ],
                         ),
                       ),
-                  ],
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.white),
-                  ),
-                  if (year.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      year,
-                      style: const TextStyle(color: Colors.white38, fontSize: 10),
                     ),
-                  ],
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 8, 4, 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: Colors.white),
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    if (year.isNotEmpty)
+                      Text(year, style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                    if (year.isNotEmpty)
+                      const Text(' • ', style: TextStyle(color: Colors.white12, fontSize: 11)),
+                    Text(widget.sourceName.split(' ').first, style: const TextStyle(color: Color(0xFF00E676), fontSize: 10)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
