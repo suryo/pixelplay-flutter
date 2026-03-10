@@ -6,11 +6,13 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/services.dart';
 import 'package:pixelplay/models/media_item.dart';
 
 class MediaProvider extends ChangeNotifier {
   final Player player = Player();
   late VideoController videoController;
+  static const _pipChannel = MethodChannel('pixelplay/pip');
   
   List<MediaItem> _playlist = [];
   List<MediaItem> _allScannedItems = []; 
@@ -24,6 +26,7 @@ class MediaProvider extends ChangeNotifier {
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
   List<double> equalizerGains = List.filled(10, 0.0);
+  bool _isPiPActive = false;
 
   List<MediaItem> get playlist => _playlist.where((item) => _showHidden || !item.isHidden).toList();
   String get currentQueueName => _currentQueueName;
@@ -34,6 +37,7 @@ class MediaProvider extends ChangeNotifier {
   bool get showHidden => _showHidden;
   Map<String, List<String>> get customPlaylists => _customPlaylists;
   List<MediaItem> get allScannedItems => _allScannedItems;
+  bool get isPiPActive => _isPiPActive;
 
   Map<String, List<MediaItem>> get folders {
     final Map<String, List<MediaItem>> folderMap = {};
@@ -76,11 +80,19 @@ class MediaProvider extends ChangeNotifier {
     _initListeners();
     _loadPreferences();
     autoScanMedia();
+    
+    _pipChannel.setMethodCallHandler((call) async {
+      if (call.method == 'onPiPModeChanged') {
+        _isPiPActive = call.arguments as bool;
+        notifyListeners();
+      }
+    });
   }
 
   void _initListeners() {
     player.stream.playing.listen((playing) {
       _isPlaying = playing;
+      _syncPlaybackToNative();
       notifyListeners();
     });
     player.stream.position.listen((pos) {
@@ -281,7 +293,15 @@ class MediaProvider extends ChangeNotifier {
     final uri = item.path.startsWith('http') ? item.path : Uri.file(item.path).toString();
     player.open(Media(uri));
     player.play();
+    _syncPlaybackToNative();
     notifyListeners();
+  }
+
+  void _syncPlaybackToNative() {
+    _pipChannel.invokeMethod('updatePlaybackStatus', {
+      'isPlaying': _isPlaying && _currentItem != null,
+      'mediaType': _currentItem?.type == MediaType.video ? 'video' : 'audio',
+    });
   }
 
   void togglePlayback() {
@@ -294,6 +314,7 @@ class MediaProvider extends ChangeNotifier {
         player.play();
       }
     }
+    _syncPlaybackToNative();
   }
 
   void seek(Duration position) {

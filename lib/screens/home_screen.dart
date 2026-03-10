@@ -226,41 +226,44 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _QueueHeader extends StatelessWidget {
-  const _QueueHeader();
+  const _QueueHeader({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<MediaProvider>(
-      builder: (context, provider, _) => Row(
-        children: [
-          GestureDetector(
-            onTap: () => _showPlaylistMenu(context, provider),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                   Text(
-                    provider.currentQueueName,
-                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+    final provider = context.watch<MediaProvider>();
+    return Row(
+      children: [
+        GestureDetector(
+          onTap: () => _showPlaylistMenu(context, provider),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  provider.currentQueueName,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
                   ),
-                  const SizedBox(width: 8),
-                  const Icon(Icons.keyboard_arrow_down, color: Colors.white70, size: 16),
-                ],
-              ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(Icons.keyboard_arrow_down, color: Colors.white70, size: 16),
+              ],
             ),
           ),
-          const Spacer(),
-          IconButton(
-            icon: const Icon(Icons.add, color: Color(0xFF00E676), size: 20),
-            onPressed: () => _showCreatePlaylistDialog(context, provider),
-          ),
-        ],
-      ),
+        ),
+        const Spacer(),
+        IconButton(
+          icon: const Icon(Icons.add, color: Color(0xFF00E676), size: 20),
+          onPressed: () => _showCreatePlaylistDialog(context, provider),
+        ),
+      ],
     );
   }
 
@@ -268,13 +271,18 @@ class _QueueHeader extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF161616),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       builder: (context) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Padding(
             padding: EdgeInsets.all(16.0),
-            child: Text('Select Queue / Playlist', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
+            child: Text(
+              'Select Queue / Playlist',
+              style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold),
+            ),
           ),
           ListTile(
             leading: const Icon(Icons.library_music_outlined, color: Colors.white70),
@@ -317,13 +325,18 @@ class _QueueHeader extends StatelessWidget {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel', style: TextStyle(color: Colors.white38))),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white38)),
+          ),
           TextButton(
             onPressed: () {
               if (controller.text.isNotEmpty) {
                 provider.createPlaylist(controller.text);
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Playlist "${controller.text}" created!')));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Playlist "${controller.text}" created!')),
+                );
               }
             },
             child: const Text('Create', style: TextStyle(color: Color(0xFF00E676))),

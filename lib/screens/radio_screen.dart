@@ -170,6 +170,9 @@ class _RadioScreenState extends State<RadioScreen> {
       type: MediaType.audio,
       artist: station['country'] ?? 'Radio',
       album: 'Online Stream',
+      thumbnail: (station['favicon'] != null && station['favicon'].toString().isNotEmpty) 
+          ? station['favicon'] 
+          : null,
     );
 
     provider.playItem(mediaItem);
